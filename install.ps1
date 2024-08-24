@@ -43,6 +43,7 @@ winget install -e --id TechSmith.Snagit.2024
 # Install Windows Subsystem for Linux
 wsl --install
 
+Restart-Computer -Force
 
 
 

@@ -31,9 +31,6 @@ winget install -e --id Notepad++.Notepad++
 # Install Git
 winget install -e --id Git.Git
 
-# Install Git Credential Manager
-winget install -e --id Git.GCM
-
 # Install 7-zip
 winget install -e --id 7zip.7zip
 

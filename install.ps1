@@ -26,7 +26,7 @@ winget install -e --id HashiCorp.Terraform
 winget install -e --id Microsoft.Bicep
 
 # Install Notepad ++
-winget install -e --id NotepadPlusPlus
+winget install -e --id Notepad++.Notepad++
 
 # Install Git
 winget install -e --id Git.Git

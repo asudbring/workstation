@@ -35,7 +35,7 @@ winget install -e --id Git.Git
 winget install -e --id 7zip.7zip
 
 # Install Snagit
-winget install -e --id TechSmith.Snagit.2024
+winget install -e --id TechSmith.Snagit.2025
 
 # Install Windows Subsystem for Linux
 wsl --install

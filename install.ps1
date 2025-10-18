@@ -37,8 +37,11 @@ winget install -e --id 7zip.7zip
 # Install Snagit
 winget install -e --id TechSmith.Snagit.2025
 
+# Install oh-my-posh
+winget install JanDeDobbeleer.OhMyPosh
+
 # Install Windows Subsystem for Linux
-wsl --install
+wsl --install 
 
 
 

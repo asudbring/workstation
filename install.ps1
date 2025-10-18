@@ -51,7 +51,7 @@ if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
     New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
   }
 $psgit = 'Import-Module posh-git'
-$pstheme = 'oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\paradox.omp.json" | Invoke-Expression'
+$pstheme = 'oh-my-posh init pwsh --config "https://github.com/JanDeDobbeleer/oh-my-posh/blob/main/themes/agnoster.omp.json" | Invoke-Expression'
 Add-Content -Path $profile.AllUsersAllHosts -Value $psgit
 Add-Content -Path $profile.AllUsersAllHosts -Value $pstheme
 

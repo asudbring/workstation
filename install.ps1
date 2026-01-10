@@ -47,13 +47,13 @@ Install-Module -Name PSReadLine -Scope CurrentUser -Force -SkipPublisherCheck
 Install-Module posh-git -Scope CurrentUser -Force
 
 # Install profile customizations
-if (!(Test-Path -Path $PROFILE.AllUsersAllHosts)) {
-    New-Item -ItemType File -Path $PROFILE.AllUsersAllHosts -Force
+if (!(Test-Path -Path $PROFILE.CurrentUserCurrentHost)) {
+    New-Item -ItemType File -Path $PROFILE.CurrentUserCurrentHost -Force
   }
 $psgit = 'Import-Module posh-git'
 $pstheme = 'oh-my-posh init pwsh --config "https://github.com/JanDeDobbeleer/oh-my-posh/blob/main/themes/agnoster.omp.json" | Invoke-Expression'
-Add-Content -Path $profile.AllUsersAllHosts -Value $psgit
-Add-Content -Path $profile.AllUsersAllHosts -Value $pstheme
+Add-Content -Path $profile.CurrentUserCurrentHost -Value $psgit
+Add-Content -Path $profile.CurrentUserCurrentHost -Value $pstheme
 
 # Install Windows Subsystem for Linux
 wsl --install 

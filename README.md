@@ -185,9 +185,133 @@ Skipped:    28
 Failed:     0
 ```
 
-## Linux
+## Linux (Ubuntu / Arch)
 
-_Coming soon._
+### Quick start
+
+On a fresh Ubuntu or Arch Linux machine, open a terminal and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/asudbring/workstation/main/install-linux.sh | bash
+```
+
+Or download first, inspect, then run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/asudbring/workstation/main/install-linux.sh -o install-linux.sh
+chmod +x install-linux.sh
+./install-linux.sh
+```
+
+The script detects the distribution automatically via `/etc/os-release` and supports:
+- **Ubuntu/Debian-based** — apt + Microsoft/HashiCorp/GitHub repos
+- **Arch-based** — pacman + yay (AUR helper, auto-installed if missing)
+
+### What gets installed
+
+The script works in two modes:
+- **Fresh install** — installs everything below, skips items already present
+- **Re-run / update** — upgrades packages (`apt upgrade` / `pacman -Syu`), updates npm globals, pip packages, oh-my-bash, PowerShell modules
+
+#### Package managers & build tools
+
+| Component | Ubuntu | Arch |
+|-----------|--------|------|
+| System update | `apt update && apt upgrade` | `pacman -Syu` |
+| Build tools | `build-essential`, curl, wget, unzip | `base-devel`, curl, wget, unzip |
+| AUR helper | — | `yay` (auto-installed) |
+
+#### Core development tools
+
+| Tool | Ubuntu | Arch |
+|------|--------|------|
+| Git | `apt install git` | `pacman -S git` |
+| Node.js + npm | `apt install nodejs npm` | `pacman -S nodejs npm` |
+| Python 3 + pip | `apt install python3 python3-pip python3-venv` | `pacman -S python python-pip` |
+| Terraform | HashiCorp apt repo | `pacman -S terraform` |
+| Docker | `apt install docker.io docker-compose-plugin` | `pacman -S docker docker-compose` |
+| Azure CLI | Microsoft apt repo | AUR: `azure-cli` |
+| PowerShell 7 | Microsoft prod repo | AUR: `powershell-bin` |
+| GitHub CLI | GitHub apt repo | `pacman -S github-cli` |
+
+#### CLI utilities
+
+| Tool | Command | Ubuntu | Arch |
+|------|---------|--------|------|
+| ripgrep | `rg` | `apt` | `pacman` |
+| fd | `fd` | `apt` (fd-find, symlinked) | `pacman` (fd) |
+| fzf | `fzf` | `apt` | `pacman` |
+| DuckDB | `duckdb` | GitHub release binary | `pacman` |
+| git-delta | `delta` | `apt` | `pacman` |
+| xh | `xh` | GitHub release binary | `pacman` |
+| watchexec | `watchexec` | GitHub release binary | `pacman` |
+| just | `just` | GitHub release binary | `pacman` |
+| age | `age` | `apt` | `pacman` |
+| semgrep | `semgrep` | `pip install semgrep` | `pip install semgrep` |
+| Bun | `bun` | Official install script | Official install script |
+| oh-my-posh | `oh-my-posh` | Official install script | `pacman` |
+
+#### GUI applications
+
+| App | Ubuntu | Arch | Purpose |
+|-----|--------|------|---------|
+| Microsoft Edge | Microsoft apt repo | AUR: `microsoft-edge-stable-bin` | Web browser |
+| VS Code | Microsoft apt repo | AUR: `visual-studio-code-bin` | Code editor |
+| Terminator | `apt` | `pacman` | Terminal emulator |
+| Flameshot | `apt` | `pacman` | Screenshot tool |
+| Remmina + FreeRDP | `apt` | `pacman` | RDP client |
+| virt-manager + QEMU | `apt` | `pacman` | Virtualization |
+
+#### Shell & terminal customization
+
+| Component | Details |
+|-----------|---------|
+| oh-my-bash | Installed with agnoster theme |
+| .bashrc | PATH additions, claude-local alias |
+| Terminator config | Delugia font (14pt), dark theme, block cursor, custom palette |
+| Delugia Nerd Font | Downloaded from GitHub releases → `~/.local/share/fonts/` |
+| PowerShell profile | oh-my-posh agnoster theme in `~/.config/powershell/profile.ps1` |
+
+#### PowerShell modules
+
+| Module | Purpose |
+|--------|---------|
+| Az | Azure PowerShell |
+| PSReadLine | Enhanced readline |
+| posh-git | Git prompt integration |
+
+#### NPM global packages
+
+| Package | Command | Purpose |
+|---------|---------|---------|
+| context-mode | `ctx` | Codebase context indexing |
+| @github/copilot | `copilot` | GitHub Copilot CLI agent |
+| opencode-ai | `opencode` | AI coding agent |
+
+#### Git configuration
+
+| Setting | Value |
+|---------|-------|
+| user.name | `asudbring` |
+| user.email | `allen@sudbring.com` |
+| core.pager | `delta` (with line-numbers, navigate) |
+| credential.helper | Git Credential Manager (GCM) |
+| credential.https://dev.azure.com.useHttpPath | `true` |
+
+#### SSH key setup
+
+Same encrypted key retrieval as macOS/Windows — see [SSH key management](#ssh-key-management) below.
+
+### Re-run summary
+
+On re-run, the script shows a summary:
+
+```
+Installed:  0
+Updated:    25
+Skipped:    42
+Failed:     0
+```
 
 ## Windows
 

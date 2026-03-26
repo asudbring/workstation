@@ -14,6 +14,10 @@
 
 set -euo pipefail
 
+# Cleanup temp files on exit/error
+cleanup() { rm -f "/tmp/${KEY_NAME:-sudbringlab}.age" "/tmp/${KEY_NAME:-sudbringlab}.age.b64"; }
+trap cleanup EXIT
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

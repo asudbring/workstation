@@ -138,7 +138,7 @@ grep -q "sudbringlab" ~/.ssh/config 2>/dev/null && echo "ALREADY CONFIGURED" || 
 If not present, append:
 
 ```
-# Managed by workstation install — sudbringlab
+# Managed by install-macos.sh — sudbringlab   (use install-windows.ps1 on Windows)
 Host media-server.sudbringlab.com
     HostName media-server.sudbringlab.com
     User allenadmin

@@ -641,7 +641,7 @@ if (-not (Test-Path $settingsPath)) {
                 useAcrylic                 = $true
                 opacity                    = 85
             }
-            $settingsJson.profiles.list += $newGitBash
+            $settingsJson.profiles.list = @($settingsJson.profiles.list) + $newGitBash
             Write-Ok "Git Bash profile added and customized"
             Mark-Installed
         } else {
@@ -753,9 +753,14 @@ if ($SshGistId -eq "PASTE_GIST_ID_HERE") {
                 [System.Convert]::FromBase64String($encryptedB64) | Set-Content $tempEncrypted -AsByteStream
 
                 age -d -o $SshKeyPath $tempEncrypted
+                $ageExitCode = $LASTEXITCODE
                 Remove-Item $tempEncrypted -Force -ErrorAction SilentlyContinue
 
-                if (Test-Path $SshKeyPath) {
+                if ($ageExitCode -ne 0) {
+                    Write-Fail "age decryption failed (exit code $ageExitCode) — wrong passphrase?"
+                    Remove-Item $SshKeyPath -Force -ErrorAction SilentlyContinue
+                    Mark-Failed
+                } elseif (Test-Path $SshKeyPath) {
                     Write-Ok "SSH private key written to $SshKeyPath"
                     Mark-Installed
 
@@ -879,6 +884,7 @@ if (Test-CommandExists "npm") {
     } else {
         Write-Info "Installing context-mode..."
         npm install -g context-mode 2>$null
+        Update-Path
         if (Test-CommandExists "ctx") {
             Write-Ok "context-mode installed"
             Mark-Installed

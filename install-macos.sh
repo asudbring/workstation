@@ -349,7 +349,7 @@ else
 $(/opt/homebrew/bin/brew shellenv) | Invoke-Expression
 
 # oh-my-posh theme
-oh-my-posh init pwsh --config "https://github.com/JanDeDobbeleer/oh-my-posh/blob/main/themes/agnoster.omp.json" | Invoke-Expression
+oh-my-posh init pwsh --config "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/agnoster.omp.json" | Invoke-Expression
 PWSH_EOF
     success "PowerShell profile configured"
     mark_installed
@@ -637,8 +637,14 @@ else
                 info "Decrypting SSH key (enter your passphrase)..."
                 TEMP_AGE="/tmp/sudbringlab_$$.age"
                 echo "$ENCRYPTED_B64" | base64 -d -o "$TEMP_AGE"
-                age -d -o "$SSH_KEY_PATH" "$TEMP_AGE"
-                rm -f "$TEMP_AGE"
+                if age -d -o "$SSH_KEY_PATH" "$TEMP_AGE"; then
+                    rm -f "$TEMP_AGE"
+                else
+                    rm -f "$TEMP_AGE"
+                    rm -f "$SSH_KEY_PATH"
+                    fail "age decryption failed — wrong passphrase?"
+                    mark_failed
+                fi
 
                 if [[ -f "$SSH_KEY_PATH" ]]; then
                     chmod 600 "$SSH_KEY_PATH"

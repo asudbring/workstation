@@ -60,6 +60,7 @@ The script works in two modes:
 | just | `just` | Simple task runner |
 | semgrep | `semgrep` | Static code analysis |
 | oh-my-posh | `oh-my-posh` | Prompt theme engine |
+| age | `age` | Modern file encryption |
 
 #### GUI applications (Homebrew casks)
 
@@ -198,10 +199,12 @@ On a fresh Windows machine, open **PowerShell as Administrator** and run:
 Set-ExecutionPolicy Bypass -Scope Process -Force; irm https://raw.githubusercontent.com/asudbring/workstation/main/install-windows.ps1 | iex
 ```
 
-> **Note:** The one-liner won't have access to the terminal background images (stored in `assets/`). For the full experience with Windows Terminal backgrounds, clone the repo first:
+> **Note:** The one-liner won't have access to the terminal background images (stored in `assets/`). For the full experience with Windows Terminal backgrounds, install Git first and clone the repo:
 
 ```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force
+winget install --id Git.Git --accept-source-agreements --accept-package-agreements --silent
+# Close and reopen PowerShell as Administrator to pick up Git in PATH
 git clone https://github.com/asudbring/workstation.git
 cd workstation
 .\install-windows.ps1
@@ -270,6 +273,7 @@ The script works in two modes:
 | `dandavison.delta` | `delta` | Better git diff output for AI parsing |
 | `ducaale.xh` | `xh` | Structured HTTP client output |
 | `Casey.Just` | `just` | Simple task runner |
+| `FiloSottile.age` | `age` | Modern file encryption |
 
 #### Fonts
 
@@ -396,3 +400,79 @@ Updated:    12
 Skipped:    28
 Failed:     0
 ```
+
+## SSH key management
+
+Both install scripts include an optional section for setting up SSH keys for `media-server.sudbringlab.com` and `media.sudbringlab.com`. Keys are stored securely using **`age` encryption** in a **secret GitHub Gist**.
+
+### How it works
+
+```
+┌─────────────────────────────────┐
+│  Secret GitHub Gist             │
+│  (age-encrypted private key)    │
+│  + public key                   │
+└────────────┬────────────────────┘
+             │ gh gist view <id>
+             ▼
+┌─────────────────────────────────┐
+│  age --decrypt                  │
+│  (prompts for passphrase)       │
+│  → ~/.ssh/sudbringlab           │
+│  → ~/.ssh/config                │
+└─────────────────────────────────┘
+```
+
+- **Double-layered security**: Gist is secret (unlisted) + file is age-encrypted
+- **Agent-safe**: Passphrase is entered at an interactive prompt — never in plaintext code or chat
+- **Free**: No Azure resources or paid services required
+
+### Initial setup (one time)
+
+Run the setup script on any machine that already has the SSH keys (or to generate new ones):
+
+```bash
+chmod +x setup-ssh-keys.sh
+./setup-ssh-keys.sh
+```
+
+This will:
+
+1. Generate an Ed25519 SSH key pair
+2. Encrypt the private key with a passphrase using `age`
+3. Upload the encrypted key + public key to a secret GitHub Gist
+4. Print the gist ID to paste into both install scripts
+
+After running, deploy the public key to the servers:
+
+```bash
+ssh-copy-id -i ~/.ssh/sudbringlab.pub allenadmin@media-server.sudbringlab.com
+ssh-copy-id -i ~/.ssh/sudbringlab.pub allenadmin@media.sudbringlab.com
+```
+
+### Retrieval on new machines
+
+When you run `install-macos.sh` or `install-windows.ps1`, the SSH section will:
+
+1. Check if `~/.ssh/sudbringlab` already exists (skip if so)
+2. Prompt: "Set up SSH keys for sudbringlab servers? (y/N)"
+3. Download the encrypted key from the gist via `gh gist view`
+4. Prompt for the passphrase to decrypt with `age`
+5. Write the private key to `~/.ssh/sudbringlab` (permissions 600)
+6. Write the public key to `~/.ssh/sudbringlab.pub`
+7. Add host entries to `~/.ssh/config`
+
+### Configuration
+
+After running `setup-ssh-keys.sh`, paste the gist ID into both scripts:
+
+- **macOS**: `install-macos.sh` — search for `SSH_GIST_ID=`
+- **Windows**: `install-windows.ps1` — search for `$SshGistId =`
+
+### Tools used
+
+| Tool | Purpose | Install |
+|---|---|---|
+| `age` | Modern file encryption (passphrase-based) | `brew install age` / `winget install FiloSottile.age` |
+| `gh` | GitHub CLI (gist access) | Already in install scripts |
+| `ssh-keygen` | Key generation | Built into macOS/Windows |

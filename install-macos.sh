@@ -131,6 +131,7 @@ FORMULAE=(
     "just"
     "semgrep"
     "oh-my-posh"
+    "age"
 )
 
 for formula in "${FORMULAE[@]}"; do
@@ -592,7 +593,101 @@ else
     fi
 fi
 
-# ── Section 9: Post-Install Configuration ─────────────────────────────────
+# ── Section 9: SSH Key Setup (sudbringlab servers) ────────────────────────
+section "SSH Key Setup (sudbringlab servers)"
+
+SSH_GIST_ID="639363ac7797dced788c7b2706986fc6"
+SSH_KEY_PATH="$HOME/.ssh/sudbringlab"
+SSH_CONFIG="$HOME/.ssh/config"
+SSH_MARKER="# Managed by install-macos.sh — sudbringlab"
+
+if [[ "$SSH_GIST_ID" == "PASTE_GIST_ID_HERE" ]]; then
+    warn "SSH gist ID not configured — run setup-ssh-keys.sh first, then paste the gist ID"
+    warn "Look for SSH_GIST_ID= near the top of the SSH section in this script"
+    mark_skipped
+elif [[ -f "$SSH_KEY_PATH" ]]; then
+    skip "SSH key already exists at $SSH_KEY_PATH"
+    mark_skipped
+else
+    # Prompt user (skip in non-interactive / scheduled runs)
+    if [[ -t 0 ]]; then
+        read -rp "Set up SSH keys for sudbringlab servers? (y/N): " setup_ssh
+    else
+        setup_ssh="n"
+    fi
+
+    if [[ "$setup_ssh" == "y" || "$setup_ssh" == "Y" ]]; then
+        if ! command -v age &>/dev/null; then
+            fail "age not found — should have been installed via Homebrew"
+            mark_failed
+        elif ! command -v gh &>/dev/null; then
+            fail "gh CLI not found — cannot download SSH key"
+            mark_failed
+        else
+            mkdir -p "$HOME/.ssh"
+            chmod 700 "$HOME/.ssh"
+
+            info "Downloading encrypted SSH key from GitHub Gist..."
+            ENCRYPTED_B64=$(gh gist view "$SSH_GIST_ID" -f sudbringlab.age.b64 --raw 2>/dev/null) || true
+
+            if [[ -z "$ENCRYPTED_B64" ]]; then
+                fail "Failed to download SSH key from gist $SSH_GIST_ID"
+                mark_failed
+            else
+                info "Decrypting SSH key (enter your passphrase)..."
+                TEMP_AGE="/tmp/sudbringlab_$$.age"
+                echo "$ENCRYPTED_B64" | base64 -d -o "$TEMP_AGE"
+                age -d -o "$SSH_KEY_PATH" "$TEMP_AGE"
+                rm -f "$TEMP_AGE"
+
+                if [[ -f "$SSH_KEY_PATH" ]]; then
+                    chmod 600 "$SSH_KEY_PATH"
+                    success "SSH private key written to $SSH_KEY_PATH"
+                    mark_installed
+
+                    # Download public key
+                    gh gist view "$SSH_GIST_ID" -f sudbringlab.pub --raw > "${SSH_KEY_PATH}.pub" 2>/dev/null || true
+                    if [[ -f "${SSH_KEY_PATH}.pub" ]]; then
+                        chmod 644 "${SSH_KEY_PATH}.pub"
+                        success "SSH public key written to ${SSH_KEY_PATH}.pub"
+                    fi
+
+                    # Configure ~/.ssh/config
+                    if [[ -f "$SSH_CONFIG" ]] && grep -q "$SSH_MARKER" "$SSH_CONFIG" 2>/dev/null; then
+                        skip "SSH config entries already present"
+                        mark_skipped
+                    else
+                        info "Adding sudbringlab hosts to $SSH_CONFIG..."
+                        cat >> "$SSH_CONFIG" << SSHEOF
+
+$SSH_MARKER
+Host media-server.sudbringlab.com
+    HostName media-server.sudbringlab.com
+    User allenadmin
+    IdentityFile ~/.ssh/sudbringlab
+
+Host media.sudbringlab.com
+    HostName media.sudbringlab.com
+    User allenadmin
+    IdentityFile ~/.ssh/sudbringlab
+SSHEOF
+                        chmod 600 "$SSH_CONFIG"
+                        success "SSH config updated with sudbringlab hosts"
+                        mark_installed
+                    fi
+                else
+                    fail "Decryption failed — SSH key not written"
+                    mark_failed
+                fi
+            fi
+        fi
+    else
+        skip "SSH key setup skipped by user"
+        mark_skipped
+    fi
+fi
+
+# ── Section 10: Post-Install Configuration ────────────────────────────────
 section "Post-Install Configuration"
 
 # GitHub CLI authentication (required for extensions like gh-copilot)

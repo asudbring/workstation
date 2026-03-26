@@ -168,7 +168,8 @@ $aiTools = @(
     @{ Id = "DuckDB.cli";              Name = "DuckDB";           Cmd = "duckdb" },
     @{ Id = "dandavison.delta";        Name = "git-delta";        Cmd = "delta" },
     @{ Id = "ducaale.xh";              Name = "xh";               Cmd = "xh" },
-    @{ Id = "Casey.Just";              Name = "just";             Cmd = "just" }
+    @{ Id = "Casey.Just";              Name = "just";             Cmd = "just" },
+    @{ Id = "FiloSottile.age";         Name = "age (encryption)"; Cmd = "age" }
 )
 
 foreach ($tool in $aiTools) {
@@ -708,7 +709,109 @@ if (Test-CommandExists "git") {
     Mark-Failed
 }
 
-# ── Section 8: Post-Install ───────────────────────────────────────────────
+# ── Section 8: SSH Key Setup (sudbringlab servers) ────────────────────────
+Write-Section "SSH Key Setup (sudbringlab servers)"
+
+$SshGistId   = "639363ac7797dced788c7b2706986fc6"
+$SshKeyPath  = "$HOME\.ssh\sudbringlab"
+$SshConfig   = "$HOME\.ssh\config"
+$SshMarker   = "# Managed by install-windows.ps1 — sudbringlab"
+
+if ($SshGistId -eq "PASTE_GIST_ID_HERE") {
+    Write-Warn "SSH gist ID not configured — run setup-ssh-keys.sh first, then paste the gist ID"
+    Write-Warn "Look for `$SshGistId= near the top of the SSH section in this script"
+    Mark-Skipped
+} elseif (Test-Path $SshKeyPath) {
+    Write-Skip "SSH key already exists at $SshKeyPath"
+    Mark-Skipped
+} else {
+    # Prompt user
+    $setupSsh = Read-Host "Set up SSH keys for sudbringlab servers? (y/N)"
+
+    if ($setupSsh -eq "y" -or $setupSsh -eq "Y") {
+        if (-not (Test-CommandExists "age")) {
+            Write-Fail "age not found — should have been installed via winget"
+            Mark-Failed
+        } elseif (-not (Test-CommandExists "gh")) {
+            Write-Fail "gh CLI not found — cannot download SSH key"
+            Mark-Failed
+        } else {
+            $sshDir = "$HOME\.ssh"
+            if (-not (Test-Path $sshDir)) {
+                New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
+            }
+
+            Write-Info "Downloading encrypted SSH key from GitHub Gist..."
+            $encryptedB64 = gh gist view $SshGistId -f sudbringlab.age.b64 --raw 2>$null
+
+            if (-not $encryptedB64) {
+                Write-Fail "Failed to download SSH key from gist $SshGistId"
+                Mark-Failed
+            } else {
+                Write-Info "Decrypting SSH key (enter your passphrase)..."
+                $tempEncrypted = "$env:TEMP\sudbringlab_$PID.age"
+                [System.Convert]::FromBase64String($encryptedB64) | Set-Content $tempEncrypted -AsByteStream
+
+                age -d -o $SshKeyPath $tempEncrypted
+                Remove-Item $tempEncrypted -Force -ErrorAction SilentlyContinue
+
+                if (Test-Path $SshKeyPath) {
+                    Write-Ok "SSH private key written to $SshKeyPath"
+                    Mark-Installed
+
+                    # Download public key
+                    try {
+                        $pubKey = gh gist view $SshGistId -f sudbringlab.pub --raw 2>$null
+                        if ($pubKey) {
+                            $pubKey | Set-Content "${SshKeyPath}.pub"
+                            Write-Ok "SSH public key written to ${SshKeyPath}.pub"
+                        }
+                    } catch {}
+
+                    # Configure ~/.ssh/config
+                    $configExists = $false
+                    if (Test-Path $SshConfig) {
+                        $configContent = Get-Content $SshConfig -Raw -ErrorAction SilentlyContinue
+                        if ($configContent -match [regex]::Escape($SshMarker)) {
+                            $configExists = $true
+                        }
+                    }
+
+                    if ($configExists) {
+                        Write-Skip "SSH config entries already present"
+                        Mark-Skipped
+                    } else {
+                        Write-Info "Adding sudbringlab hosts to $SshConfig..."
+                        $sshConfigBlock = @"
+
+$SshMarker
+Host media-server.sudbringlab.com
+    HostName media-server.sudbringlab.com
+    User allenadmin
+    IdentityFile ~/.ssh/sudbringlab
+
+Host media.sudbringlab.com
+    HostName media.sudbringlab.com
+    User allenadmin
+    IdentityFile ~/.ssh/sudbringlab
+"@
+                        Add-Content -Path $SshConfig -Value $sshConfigBlock
+                        Write-Ok "SSH config updated with sudbringlab hosts"
+                        Mark-Installed
+                    }
+                } else {
+                    Write-Fail "Decryption failed — SSH key not written"
+                    Mark-Failed
+                }
+            }
+        }
+    } else {
+        Write-Skip "SSH key setup skipped by user"
+        Mark-Skipped
+    }
+}
+
+# ── Section 9: Post-Install ───────────────────────────────────────────────
 Write-Section "Post-Install"
 
 # Refresh PATH one more time

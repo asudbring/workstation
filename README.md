@@ -195,8 +195,16 @@ _Coming soon._
 On a fresh Windows machine, open **PowerShell as Administrator** and run:
 
 ```powershell
+Set-ExecutionPolicy Bypass -Scope Process -Force; irm https://raw.githubusercontent.com/asudbring/workstation/main/install-windows.ps1 | iex
+```
+
+> **Note:** The one-liner won't have access to the terminal background images (stored in `assets/`). For the full experience with Windows Terminal backgrounds, clone the repo first:
+
+```powershell
 Set-ExecutionPolicy Bypass -Scope Process -Force
-irm https://raw.githubusercontent.com/asudbring/workstation/main/install-windows.ps1 | iex
+git clone https://github.com/asudbring/workstation.git
+cd workstation
+.\install-windows.ps1
 ```
 
 Or download first, inspect, then run:

@@ -61,6 +61,7 @@ The script works in two modes:
 | semgrep | `semgrep` | Static code analysis |
 | oh-my-posh | `oh-my-posh` | Prompt theme engine |
 | age | `age` | Modern file encryption |
+| powershell | `pwsh` | PowerShell cross-platform shell |
 
 #### GUI applications (Homebrew casks)
 
@@ -69,11 +70,12 @@ The script works in two modes:
 | `microsoft-edge` | Microsoft Edge |
 | `visual-studio-code` | VS Code |
 | `docker` | Docker Desktop |
-| `powershell` | PowerShell (`pwsh`) |
+| `parallels` | Parallels Desktop |
 | `snagit` | Snagit (screen capture) |
 | `microsoft-office` | Microsoft Office 365 |
 | `windows-app` | Windows App (RDP) |
 | `claude` | Claude Desktop |
+| `claude-code` | Claude Code CLI (`claude`) |
 
 > Apps already installed outside of Homebrew (e.g., Claude, Office) are detected and skipped.
 
@@ -81,7 +83,7 @@ The script works in two modes:
 
 | Font | Source | Purpose |
 |---|---|---|
-| Delugia Nerd Font | [GitHub releases](https://github.com/adam7/delugia-code/releases) | Patched font with glyphs for Agnoster theme |
+| Delugia Book Nerd Font | [GitHub releases](https://github.com/admcpr/delugia-code/releases) | Patched font with glyphs for Agnoster theme |
 
 Downloaded via `curl` from GitHub and installed to `~/Library/Fonts`.
 
@@ -99,6 +101,40 @@ Downloaded via `curl` from GitHub and installed to `~/Library/Fonts`.
 | GitHub Copilot CLI agent | `npm install -g @github/copilot` | `npm update -g @github/copilot` |
 | OpenCode | `brew install opencode` | Updated via `brew upgrade` |
 | context-mode | `npm install -g context-mode` | `npm update -g context-mode` |
+
+#### Copilot CLI MCP configuration (`~/.copilot/mcp-config.json`)
+
+The script writes the MCP server configuration for GitHub Copilot CLI, sourced from `.github/.vscode/mcp.json`:
+
+| Server | Type | Notes |
+|---|---|---|
+| `cerebro` | HTTP | Microsoft internal knowledge retrieval |
+| `context7` | HTTP | Library documentation lookup |
+| `context-mode` | stdio | Context window optimization |
+| `microsoft-docs` | HTTP | Microsoft Learn documentation search |
+| `ado-content` | stdio | Azure DevOps work item management |
+| `content-developer-assistant` | stdio | Local clone — path resolved from `$CONTENT_DEV_MCP_PATH` or `~/github/content-developer-mcp` |
+
+The script is idempotent: it skips writing if all servers are already present. If `content-developer-mcp` is not cloned yet, a warning is shown but the config is still written with the expected path.
+
+#### OpenCode MCP configuration (`~/.config/opencode/opencode.json`)
+
+The script merges the same MCP servers into the OpenCode global config using OpenCode's native format (`type: "remote"` / `type: "local"`). Existing config keys (provider API keys, model settings, etc.) are preserved — only missing MCP servers are added.
+
+#### Claude Code MCP configuration (user scope — `~/.claude.json`)
+
+The script uses `claude mcp add --scope user` to register each server at user scope, making them available across all projects. Each server is checked with `claude mcp get <name>` first and skipped if already present.
+
+| Server | Transport | Notes |
+|---|---|---|
+| `cerebro` | HTTP | Microsoft internal knowledge retrieval |
+| `context7` | HTTP | Library documentation lookup (API key included) |
+| `context-mode` | stdio | Context window optimization |
+| `microsoft-docs` | HTTP | Microsoft Learn documentation search |
+| `ado-content` | stdio | Azure DevOps work item management |
+| `content-developer-assistant` | stdio | Local clone — path resolved from `$CONTENT_DEV_MCP_PATH` or `~/github/content-developer-mcp` |
+
+> Claude Code must be in `PATH` when the script runs for MCP configuration to execute. On a fresh install the cask is installed earlier in the script, so it will be available.
 
 ### Shell configuration
 
@@ -132,7 +168,7 @@ Downloaded via `curl` from GitHub and installed to `~/Library/Fonts`.
 |---|---|
 | Default profile | Homebrew |
 | Startup profile | Homebrew |
-| Font | Delugia-Regular, 18pt |
+| Font | DelugiaBook-Regular, 18pt |
 | Cursor | Block, blink enabled |
 | Font antialias | Off |
 

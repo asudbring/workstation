@@ -132,6 +132,7 @@ FORMULAE=(
     "semgrep"
     "oh-my-posh"
     "age"
+    "powershell"
 )
 
 for formula in "${FORMULAE[@]}"; do
@@ -157,11 +158,12 @@ CASKS=(
     "microsoft-edge"
     "visual-studio-code"
     "docker"
-    "powershell"
+    "parallels"
     "snagit"
     "microsoft-office"
     "windows-app"
     "claude"
+    "claude-code"
 )
 
 for cask in "${CASKS[@]}"; do
@@ -191,23 +193,23 @@ done
 section "Font Installation"
 
 # Delugia Nerd Font (required for Agnoster theme glyphs)
-# Not available via Homebrew — download directly from GitHub
+# Repo moved from adam7/delugia-code to admcpr/delugia-code; "book" weight = regular weight
 if find "$HOME/Library/Fonts" /Library/Fonts -iname "*Delugia*" -print -quit 2>/dev/null | grep -q .; then
     skip "Delugia Nerd Font already installed"
     mark_skipped
 else
     info "Downloading Delugia Nerd Font from GitHub..."
-    FONT_URL="https://github.com/adam7/delugia-code/releases/latest/download/Delugia.zip"
+    FONT_URL="https://github.com/admcpr/delugia-code/releases/latest/download/delugia-book.zip"
     FONT_DIR="$HOME/Library/Fonts"
     TMPDIR_FONT=$(mktemp -d)
     mkdir -p "$FONT_DIR"
-    if curl -fsSL "$FONT_URL" -o "$TMPDIR_FONT/Delugia.zip" && \
-       unzip -qo "$TMPDIR_FONT/Delugia.zip" -d "$TMPDIR_FONT/fonts" && \
+    if curl -fsSL "$FONT_URL" -o "$TMPDIR_FONT/delugia-book.zip" && \
+       unzip -qo "$TMPDIR_FONT/delugia-book.zip" -d "$TMPDIR_FONT/fonts" && \
        find "$TMPDIR_FONT/fonts" -name "*.ttf" -exec cp {} "$FONT_DIR/" \;; then
         success "Delugia Nerd Font installed from GitHub"
         mark_installed
     else
-        fail "Delugia Nerd Font installation failed — install manually from https://github.com/adam7/delugia-code/releases"
+        fail "Delugia Nerd Font installation failed — install manually from https://github.com/admcpr/delugia-code/releases"
         mark_failed
     fi
     rm -rf "$TMPDIR_FONT" 2>/dev/null || true
@@ -487,7 +489,7 @@ font_archive = {
     '\$objects': [
         '\$null',
         {'NSSize': 18.0, 'NSfFlags': 16, 'NSName': plistlib.UID(2), '\$class': plistlib.UID(3)},
-        'Delugia-Regular',
+        'DelugiaBook-Regular',
         {'\$classname': 'NSFont', '\$classes': ['NSFont', 'NSObject']}
     ]
 }
@@ -609,9 +611,9 @@ elif [[ -f "$SSH_KEY_PATH" ]]; then
     skip "SSH key already exists at $SSH_KEY_PATH"
     mark_skipped
 else
-    # Prompt user (skip in non-interactive / scheduled runs)
-    if [[ -t 0 ]]; then
-        read -rp "Set up SSH keys for sudbringlab servers? (y/N): " setup_ssh
+    # Prompt user — read from /dev/tty so it works when piped through curl | bash
+    if [[ -c /dev/tty ]]; then
+        read -rp "Set up SSH keys for sudbringlab servers? (y/N): " setup_ssh </dev/tty
     else
         setup_ssh="n"
     fi
@@ -636,8 +638,10 @@ else
             else
                 info "Decrypting SSH key (enter your passphrase)..."
                 TEMP_AGE="/tmp/sudbringlab_$$.age"
-                echo "$ENCRYPTED_B64" | base64 -d -o "$TEMP_AGE"
-                if age -d -o "$SSH_KEY_PATH" "$TEMP_AGE"; then
+                if ! echo "$ENCRYPTED_B64" | base64 -d -o "$TEMP_AGE"; then
+                    fail "Failed to base64-decode SSH key — disk full or bad /tmp permissions?"
+                    mark_failed
+                elif age -d -o "$SSH_KEY_PATH" "$TEMP_AGE"; then
                     rm -f "$TEMP_AGE"
                 else
                     rm -f "$TEMP_AGE"
@@ -835,6 +839,270 @@ else
             fail "OpenCode installation failed"
             mark_failed
         fi
+    fi
+fi
+
+# ── Copilot CLI MCP Configuration ────────────────────────────────────────
+section "Copilot CLI MCP Configuration"
+
+COPILOT_DIR="$HOME/.copilot"
+MCP_CONFIG="$COPILOT_DIR/mcp-config.json"
+
+# Resolve content-developer-mcp path — check env var first, fall back to default
+CONTENT_DEV_PATH="${CONTENT_DEV_MCP_PATH:-$HOME/github/content-developer-mcp}"
+MCP_WRAPPER="$CONTENT_DEV_PATH/scripts/mcp-proxy-wrapper.js"
+
+# Required server keys that should be present
+REQUIRED_SERVERS='["cerebro","context7","context-mode","microsoft-docs","ado-content","content-developer-assistant"]'
+
+# Check if config already exists and has all required servers
+MCP_NEEDS_WRITE=true
+if [[ -f "$MCP_CONFIG" ]]; then
+    if python3 - "$MCP_CONFIG" "$REQUIRED_SERVERS" <<'PYCHECK'
+import json, sys
+config_path, required_json = sys.argv[1], sys.argv[2]
+required = json.loads(required_json)
+with open(config_path) as f:
+    config = json.load(f)
+servers = config.get("mcpServers", {})
+missing = [s for s in required if s not in servers]
+if missing:
+    print("MISSING: " + ", ".join(missing))
+    sys.exit(1)
+print("OK")
+PYCHECK
+    then
+        skip "Copilot CLI MCP servers already configured ($MCP_CONFIG)"
+        mark_skipped
+        MCP_NEEDS_WRITE=false
+    else
+        info "Copilot CLI MCP config exists but is missing servers — rewriting..."
+    fi
+fi
+
+if [[ "$MCP_NEEDS_WRITE" == "true" ]]; then
+    mkdir -p "$COPILOT_DIR"
+    # Write the config using Python to ensure valid JSON
+    python3 - "$MCP_CONFIG" "$MCP_WRAPPER" <<'PYWRITE'
+import json, sys
+config_path, mcp_wrapper = sys.argv[1], sys.argv[2]
+config = {
+    "mcpServers": {
+        "cerebro": {
+            "type": "http",
+            "url": "https://cerebro-ms-func.azurewebsites.net/cerebro-mcp"
+        },
+        "context7": {
+            "type": "http",
+            "url": "https://mcp.context7.com/mcp",
+            "headers": {
+                "CONTEXT7_API_KEY": "ctx7sk-65cbb72a-2302-4f4a-89af-86e2a02a48db"
+            }
+        },
+        "context-mode": {
+            "command": "context-mode"
+        },
+        "microsoft-docs": {
+            "type": "http",
+            "url": "https://learn.microsoft.com/api/mcp"
+        },
+        "ado-content": {
+            "command": "npx",
+            "args": ["-y", "@azure-devops/mcp", "msft-skilling", "--authentication", "azcli"]
+        },
+        "content-developer-assistant": {
+            "command": "node",
+            "args": [mcp_wrapper]
+        }
+    }
+}
+with open(config_path, "w") as f:
+    json.dump(config, f, indent=2)
+    f.write("\n")
+print("OK")
+PYWRITE
+
+    if [[ $? -eq 0 ]]; then
+        success "Copilot CLI MCP servers configured at $MCP_CONFIG"
+        if [[ ! -f "$MCP_WRAPPER" ]]; then
+            warn "content-developer-mcp not found at $CONTENT_DEV_PATH"
+            warn "Clone it or set CONTENT_DEV_MCP_PATH before running the script to resolve the path"
+        fi
+        mark_installed
+    else
+        fail "Failed to write Copilot CLI MCP configuration"
+        mark_failed
+    fi
+fi
+
+# ── OpenCode MCP Configuration ────────────────────────────────────────────
+section "OpenCode MCP Configuration"
+
+OPENCODE_CONFIG_DIR="$HOME/.config/opencode"
+OPENCODE_CONFIG="$OPENCODE_CONFIG_DIR/opencode.json"
+
+# Resolve content-developer-mcp path (reuse same variable as Copilot CLI section)
+CONTENT_DEV_PATH="${CONTENT_DEV_MCP_PATH:-$HOME/github/content-developer-mcp}"
+MCP_WRAPPER="$CONTENT_DEV_PATH/scripts/mcp-proxy-wrapper.js"
+
+REQUIRED_MCP_SERVERS='["cerebro","context7","context-mode","microsoft-docs","ado-content","content-developer-assistant"]'
+
+# Check if all required MCP servers are already present in the config
+OPENCODE_MCP_NEEDS_WRITE=true
+if [[ -f "$OPENCODE_CONFIG" ]]; then
+    if python3 - "$OPENCODE_CONFIG" "$REQUIRED_MCP_SERVERS" <<'PYCHECK'
+import json, sys
+config_path, required_json = sys.argv[1], sys.argv[2]
+required = json.loads(required_json)
+with open(config_path) as f:
+    config = json.load(f)
+servers = config.get("mcp", {})
+missing = [s for s in required if s not in servers]
+if missing:
+    print("MISSING: " + ", ".join(missing))
+    sys.exit(1)
+print("OK")
+PYCHECK
+    then
+        skip "OpenCode MCP servers already configured ($OPENCODE_CONFIG)"
+        mark_skipped
+        OPENCODE_MCP_NEEDS_WRITE=false
+    else
+        info "OpenCode config exists but is missing MCP servers — merging..."
+    fi
+fi
+
+if [[ "$OPENCODE_MCP_NEEDS_WRITE" == "true" ]]; then
+    mkdir -p "$OPENCODE_CONFIG_DIR"
+    # Merge MCP servers into existing config (preserves provider keys and other settings)
+    python3 - "$OPENCODE_CONFIG" "$MCP_WRAPPER" <<'PYWRITE'
+import json, sys, os
+config_path, mcp_wrapper = sys.argv[1], sys.argv[2]
+
+# Load existing config or start fresh
+if os.path.exists(config_path):
+    with open(config_path) as f:
+        config = json.load(f)
+else:
+    config = {"$schema": "https://opencode.ai/config.json"}
+
+# Merge MCP servers — only add missing ones, preserve existing entries
+mcp = config.get("mcp", {})
+
+new_servers = {
+    "cerebro": {
+        "type": "remote",
+        "url": "https://cerebro-ms-func.azurewebsites.net/cerebro-mcp",
+        "enabled": True
+    },
+    "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+            "CONTEXT7_API_KEY": "ctx7sk-65cbb72a-2302-4f4a-89af-86e2a02a48db"
+        },
+        "enabled": True
+    },
+    "context-mode": {
+        "type": "local",
+        "command": ["context-mode"],
+        "enabled": True
+    },
+    "microsoft-docs": {
+        "type": "remote",
+        "url": "https://learn.microsoft.com/api/mcp",
+        "enabled": True
+    },
+    "ado-content": {
+        "type": "local",
+        "command": ["npx", "-y", "@azure-devops/mcp", "msft-skilling", "--authentication", "azcli"],
+        "enabled": True
+    },
+    "content-developer-assistant": {
+        "type": "local",
+        "command": ["node", mcp_wrapper],
+        "enabled": True
+    }
+}
+
+for name, definition in new_servers.items():
+    if name not in mcp:
+        mcp[name] = definition
+
+config["mcp"] = mcp
+
+with open(config_path, "w") as f:
+    json.dump(config, f, indent=2)
+    f.write("\n")
+print("OK")
+PYWRITE
+
+    if [[ $? -eq 0 ]]; then
+        success "OpenCode MCP servers configured at $OPENCODE_CONFIG"
+        if [[ ! -f "$MCP_WRAPPER" ]]; then
+            warn "content-developer-mcp not found at $CONTENT_DEV_PATH"
+            warn "Clone it or set CONTENT_DEV_MCP_PATH to resolve the content-developer-assistant path"
+        fi
+        mark_installed
+    else
+        fail "Failed to write OpenCode MCP configuration"
+        mark_failed
+    fi
+fi
+
+# ── Claude Code MCP Configuration ────────────────────────────────────────
+section "Claude Code MCP Configuration"
+
+CONTENT_DEV_PATH="${CONTENT_DEV_MCP_PATH:-$HOME/github/content-developer-mcp}"
+MCP_WRAPPER="$CONTENT_DEV_PATH/scripts/mcp-proxy-wrapper.js"
+
+if ! command -v claude &>/dev/null; then
+    warn "claude CLI not found — skipping MCP configuration (re-run after Claude Code is in PATH)"
+    mark_skipped
+else
+    # Helper: add a server only if it isn't already configured
+    add_claude_mcp() {
+        local name="$1"; shift
+        if claude mcp get "$name" &>/dev/null; then
+            skip "Claude Code MCP '$name' already configured"
+            mark_skipped
+        else
+            info "Adding Claude Code MCP server: $name..."
+            if claude mcp add --scope user "$@"; then
+                success "Claude Code MCP '$name' added"
+                mark_installed
+            else
+                fail "Failed to add Claude Code MCP '$name'"
+                mark_failed
+            fi
+        fi
+    }
+
+    add_claude_mcp cerebro \
+        --transport http cerebro \
+        "https://cerebro-ms-func.azurewebsites.net/cerebro-mcp"
+
+    add_claude_mcp context7 \
+        --transport http context7 \
+        "https://mcp.context7.com/mcp" \
+        --header "CONTEXT7_API_KEY: ctx7sk-65cbb72a-2302-4f4a-89af-86e2a02a48db"
+
+    add_claude_mcp context-mode \
+        context-mode -- context-mode
+
+    add_claude_mcp microsoft-docs \
+        --transport http microsoft-docs \
+        "https://learn.microsoft.com/api/mcp"
+
+    add_claude_mcp ado-content \
+        ado-content -- npx -y @azure-devops/mcp msft-skilling --authentication azcli
+
+    add_claude_mcp content-developer-assistant \
+        content-developer-assistant -- node "$MCP_WRAPPER"
+
+    if [[ ! -f "$MCP_WRAPPER" ]]; then
+        warn "content-developer-mcp not found at $CONTENT_DEV_PATH"
+        warn "Clone it or set CONTENT_DEV_MCP_PATH to resolve the content-developer-assistant path"
     fi
 fi
 

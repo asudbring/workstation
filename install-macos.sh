@@ -463,10 +463,10 @@ try:
     if font_data:
         font_plist = plistlib.loads(font_data)
         objs = font_plist.get('\$objects', [])
-        for obj in objs:
-            if isinstance(obj, str) and 'Delugia' in obj:
-                print('Delugia')
-                break
+        name_ok = any(isinstance(o, str) and o == 'DelugiaBook-Regular' for o in objs)
+        size_ok = any(isinstance(o, dict) and o.get('NSSize') == 18.0 for o in objs)
+        if name_ok and size_ok:
+            print('Delugia')
         else:
             print('Other')
     else:
@@ -872,8 +872,14 @@ with open(config_path) as f:
     config = json.load(f)
 servers = config.get("mcpServers", {})
 missing = [s for s in required if s not in servers]
-if missing:
-    print("MISSING: " + ", ".join(missing))
+# Also check that stdio servers have "type" set
+stdio_servers = ["context-mode", "ado-content", "content-developer-assistant"]
+invalid = [s for s in stdio_servers if s in servers and "type" not in servers[s]]
+if missing or invalid:
+    if missing:
+        print("MISSING: " + ", ".join(missing))
+    if invalid:
+        print("INVALID (missing type): " + ", ".join(invalid))
     sys.exit(1)
 print("OK")
 PYCHECK
@@ -906,17 +912,21 @@ config = {
             }
         },
         "context-mode": {
-            "command": "context-mode"
+            "type": "local",
+            "command": "context-mode",
+            "args": []
         },
         "microsoft-docs": {
             "type": "http",
             "url": "https://learn.microsoft.com/api/mcp"
         },
         "ado-content": {
+            "type": "local",
             "command": "npx",
             "args": ["-y", "@azure-devops/mcp", "msft-skilling", "--authentication", "azcli"]
         },
         "content-developer-assistant": {
+            "type": "local",
             "command": "node",
             "args": [mcp_wrapper]
         }

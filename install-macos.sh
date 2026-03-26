@@ -363,17 +363,17 @@ if command -v pwsh &>/dev/null; then
 
     # Az module
     if pwsh -NoProfile -Command "if (Get-Module -ListAvailable -Name Az) { exit 0 } else { exit 1 }" 2>/dev/null; then
-        info "Az module found — updating..."
-        if pwsh -NoProfile -Command "Update-Module -Name Az -Force -Scope CurrentUser -ErrorAction SilentlyContinue" 2>/dev/null; then
-            success "Az module updated"
-            mark_updated
-        else
-            skip "Az module already at latest version"
+        info "Az module found — checking for updates..."
+        if pwsh -NoProfile -Command "\$WarningPreference='SilentlyContinue'; Update-Module -Name Az -Scope CurrentUser -ErrorAction SilentlyContinue" 2>/dev/null; then
+            success "Az module up to date"
             mark_skipped
+        else
+            fail "Az module update failed"
+            mark_failed
         fi
     else
         info "Installing Az PowerShell module..."
-        if pwsh -NoProfile -Command "Install-Module -Name Az -Force -AcceptLicense -Scope CurrentUser" 2>/dev/null; then
+        if pwsh -NoProfile -Command "\$WarningPreference='SilentlyContinue'; Install-Module -Name Az -Force -AcceptLicense -Scope CurrentUser" 2>/dev/null; then
             success "Az module installed"
             mark_installed
         else
@@ -384,17 +384,17 @@ if command -v pwsh &>/dev/null; then
 
     # PSReadLine
     if pwsh -NoProfile -Command "if (Get-Module -ListAvailable -Name PSReadLine) { exit 0 } else { exit 1 }" 2>/dev/null; then
-        info "PSReadLine found — updating..."
-        if pwsh -NoProfile -Command "Update-Module -Name PSReadLine -Force -Scope CurrentUser -ErrorAction SilentlyContinue" 2>/dev/null; then
-            success "PSReadLine updated"
-            mark_updated
-        else
-            skip "PSReadLine already at latest version"
+        info "PSReadLine found — checking for updates..."
+        if pwsh -NoProfile -Command "\$WarningPreference='SilentlyContinue'; Update-Module -Name PSReadLine -Scope CurrentUser -ErrorAction SilentlyContinue" 2>/dev/null; then
+            success "PSReadLine up to date"
             mark_skipped
+        else
+            fail "PSReadLine update failed"
+            mark_failed
         fi
     else
         info "Installing PSReadLine module..."
-        if pwsh -NoProfile -Command "Install-Module -Name PSReadLine -Scope CurrentUser -Force -SkipPublisherCheck" 2>/dev/null; then
+        if pwsh -NoProfile -Command "\$WarningPreference='SilentlyContinue'; Install-Module -Name PSReadLine -Scope CurrentUser -Force -SkipPublisherCheck" 2>/dev/null; then
             success "PSReadLine module installed"
             mark_installed
         else
@@ -405,17 +405,17 @@ if command -v pwsh &>/dev/null; then
 
     # posh-git
     if pwsh -NoProfile -Command "if (Get-Module -ListAvailable -Name posh-git) { exit 0 } else { exit 1 }" 2>/dev/null; then
-        info "posh-git found — updating..."
-        if pwsh -NoProfile -Command "Update-Module -Name posh-git -Force -Scope CurrentUser -ErrorAction SilentlyContinue" 2>/dev/null; then
-            success "posh-git updated"
-            mark_updated
-        else
-            skip "posh-git already at latest version"
+        info "posh-git found — checking for updates..."
+        if pwsh -NoProfile -Command "\$WarningPreference='SilentlyContinue'; Update-Module -Name posh-git -Scope CurrentUser -ErrorAction SilentlyContinue" 2>/dev/null; then
+            success "posh-git up to date"
             mark_skipped
+        else
+            fail "posh-git update failed"
+            mark_failed
         fi
     else
         info "Installing posh-git module..."
-        if pwsh -NoProfile -Command "Install-Module -Name posh-git -Scope CurrentUser -Force" 2>/dev/null; then
+        if pwsh -NoProfile -Command "\$WarningPreference='SilentlyContinue'; Install-Module -Name posh-git -Scope CurrentUser -Force" 2>/dev/null; then
             success "posh-git module installed"
             mark_installed
         else

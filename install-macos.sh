@@ -174,6 +174,12 @@ for cask in "${CASKS[@]}"; do
     elif [[ "$cask" == "claude" ]] && [[ -d "/Applications/Claude.app" ]]; then
         skip "$cask already installed (not managed by brew)"
         mark_skipped
+    elif [[ "$cask" == "claude-code" ]] && command -v claude &>/dev/null; then
+        skip "$cask already installed (not managed by brew)"
+        mark_skipped
+    elif [[ "$cask" == "parallels" ]] && [[ -d "/Applications/Parallels Desktop.app" ]]; then
+        skip "$cask already installed (not managed by brew)"
+        mark_skipped
     elif [[ "$cask" == "microsoft-office" ]] && [[ -d "/Applications/Microsoft Word.app" ]]; then
         skip "$cask already installed (not managed by brew)"
         mark_skipped

@@ -6,6 +6,22 @@ Repo for workstation setup scripts and support files. Each script is idempotent 
 
 ### Quick start
 
+On a fresh Mac, open Terminal and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/asudbring/workstation/main/install-macos.sh | bash
+```
+
+Or download first, inspect, then run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/asudbring/workstation/main/install-macos.sh -o install-macos.sh
+chmod +x install-macos.sh
+./install-macos.sh
+```
+
+If you already have the repo cloned:
+
 ```bash
 chmod +x install-macos.sh
 ./install-macos.sh
